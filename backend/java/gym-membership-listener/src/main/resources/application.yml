@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: gym-membership-listener
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/gimnasio}
+    username: ${DB_USER:gimnasio}
+    password: ${DB_PASSWORD:gimnasio}
+    driver-class-name: ${DB_DRIVER:org.postgresql.Driver}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update          # demo; en producción usa Flyway/Liquibase
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+    show-sql: false
+
+gym:
+  web3:
+    rpc-url: ${WEB3_RPC_URL:http://127.0.0.1:8545}
+    contract-address: ${CONTRACT_ADDRESS:0x5FbDB2315678afecb367f032d93F642f64180aa3}
+    # Bloque impreso por scripts/deploy.ts. Usa el valor real de tu despliegue.
+    start-block: ${WEB3_START_BLOCK:0}
+
+  membership:
+    expiry-check-ms: ${EXPIRY_CHECK_MS:60000}
+
+logging:
+  level:
+    com.gimnasio.web3: INFO
+    org.web3j: WARN
+    org.hibernate.SQL: WARN
