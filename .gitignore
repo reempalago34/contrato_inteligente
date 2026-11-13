@@ -1,0 +1,40 @@
+# ── Node / Hardhat ──────────────────────────────────────────────
+node_modules/
+.env
+.env.*
+!.env.example
+artifacts/
+cache/
+typechain-types/
+coverage/
+coverage.json
+
+# Despliegues locales (sí versionamos .gitkeep)
+deployments/*.json
+!deployments/.gitkeep
+
+# ── Python ──────────────────────────────────────────────────────
+backend/python/.venv/
+backend/python/venv/
+backend/python/__pycache__/
+backend/python/**/__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+backend/python/gym.db
+backend/python/abi/
+backend/python/.env
+
+# ── Java ────────────────────────────────────────────────────────
+backend/java/**/target/
+backend/java/**/.mvn/
+backend/java/**/.env
+backend/java/**/src/main/resources/abi/*.abi
+backend/java/**/src/main/resources/abi/*.bin
+*.class
+
+# ── IDEs / SO ───────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+.DS_Store

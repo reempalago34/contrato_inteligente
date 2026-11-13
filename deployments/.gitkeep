@@ -1,0 +1,2 @@
+# Placeholder para versionar la carpeta de despliegues.
+# Los archivos <red>.json y latest.json se generan con scripts/deploy.ts
