@@ -13,25 +13,21 @@ describe("GymMembership", () => {
   async function deployFixture() {
     const [owner, alice, bob] = await ethers.getSigners();
     const factory = await ethers.getContractFactory("GymMembership");
-    const contract = await factory.deploy(PRICE, "ipfs://test-cid/");
+    const contract = await factory.deploy(PRICE);
     await contract.waitForDeployment();
     return { contract, owner, alice, bob };
   }
 
   describe("Despliegue", () => {
-    it("guarda precio y baseURI", async () => {
+    it("guarda el precio inicial", async () => {
       const { contract } = await loadFixture(deployFixture);
       expect(await contract.membershipPrice()).to.equal(PRICE);
-      expect(await contract.baseURI()).to.equal("ipfs://test-cid/");
       expect(await contract.totalMinted()).to.equal(0n);
     });
 
     it("rechaza precio inicial 0", async () => {
       const factory = await ethers.getContractFactory("GymMembership");
-      await expect(factory.deploy(0n, "")).to.be.revertedWithCustomError(
-        factory,
-        "PriceMustBePositive"
-      );
+      await expect(factory.deploy(0n)).to.be.revertedWith("Precio invalido");
     });
   });
 
@@ -76,15 +72,11 @@ describe("GymMembership", () => {
 
       await expect(
         contract.connect(alice).buyMembership({ value: PRICE - 1n })
-      )
-        .to.be.revertedWithCustomError(contract, "IncorrectPayment")
-        .withArgs(PRICE, PRICE - 1n);
+      ).to.be.revertedWith("Pago incorrecto");
 
       await expect(
         contract.connect(alice).buyMembership({ value: PRICE + 1n })
-      )
-        .to.be.revertedWithCustomError(contract, "IncorrectPayment")
-        .withArgs(PRICE, PRICE + 1n);
+      ).to.be.revertedWith("Pago incorrecto");
     });
   });
 
@@ -133,9 +125,7 @@ describe("GymMembership", () => {
 
       await expect(
         contract.connect(bob).renewMembership(1n, { value: PRICE })
-      )
-        .to.be.revertedWithCustomError(contract, "NotAuthorizedToRenew")
-        .withArgs(1n, bob.address);
+      ).to.be.revertedWith("No autorizado");
     });
 
     it("un operador aprobado sí puede renovar", async () => {
@@ -145,7 +135,9 @@ describe("GymMembership", () => {
 
       await expect(
         contract.connect(bob).renewMembership(1n, { value: PRICE })
-      ).to.emit(contract, "MembershipRenewed");
+      )
+        .to.emit(contract, "MembershipRenewed")
+        .withArgs(alice.address, 1n, anyValue, anyValue, PRICE);
     });
 
     it("revierte con pago incorrecto", async () => {
@@ -154,7 +146,7 @@ describe("GymMembership", () => {
 
       await expect(
         contract.connect(alice).renewMembership(1n, { value: 1n })
-      ).to.be.revertedWithCustomError(contract, "IncorrectPayment");
+      ).to.be.revertedWith("Pago incorrecto");
     });
 
     it("revierte si el token no existe", async () => {
@@ -162,10 +154,9 @@ describe("GymMembership", () => {
 
       await expect(
         contract.connect(alice).renewMembership(999n, { value: PRICE })
-      ).to.be.revertedWithCustomError(
-        contract,
-        "ERC721NonexistentToken"
-      );
+      )
+        .to.be.revertedWithCustomError(contract, "ERC721NonexistentToken")
+        .withArgs(999n);
     });
   });
 
@@ -219,9 +210,7 @@ describe("GymMembership", () => {
 
     it("revierte si no hay fondos", async () => {
       const { contract } = await loadFixture(deployFixture);
-      await expect(
-        contract.withdrawFunds()
-      ).to.be.revertedWithCustomError(contract, "NoFundsToWithdraw");
+      await expect(contract.withdrawFunds()).to.be.revertedWith("Sin fondos");
     });
 
     it("solo el owner puede retirar", async () => {
@@ -239,13 +228,12 @@ describe("GymMembership", () => {
       const { contract, owner, alice } = await loadFixture(deployFixture);
       const newPrice = ethers.parseEther("0.02");
 
-      await expect(contract.connect(owner).setMembershipPrice(newPrice))
-        .to.emit(contract, "MembershipPriceUpdated")
-        .withArgs(PRICE, newPrice);
+      await contract.connect(owner).setMembershipPrice(newPrice);
+      expect(await contract.membershipPrice()).to.equal(newPrice);
 
       await expect(
         contract.connect(alice).buyMembership({ value: PRICE })
-      ).to.be.revertedWithCustomError(contract, "IncorrectPayment");
+      ).to.be.revertedWith("Pago incorrecto");
 
       await contract.connect(alice).buyMembership({ value: newPrice });
       expect(await contract.ownerOf(1n)).to.equal(alice.address);
@@ -258,12 +246,11 @@ describe("GymMembership", () => {
         .withArgs(alice.address);
     });
 
-    it("actualiza baseURI y tokenURI", async () => {
-      const { contract, alice } = await loadFixture(deployFixture);
-      await contract.connect(alice).buyMembership({ value: PRICE });
-
-      await contract.setBaseURI("ipfs://new-cid/");
-      expect(await contract.tokenURI(1n)).to.equal("ipfs://new-cid/1.json");
+    it("rechaza un precio 0", async () => {
+      const { contract } = await loadFixture(deployFixture);
+      await expect(
+        contract.setMembershipPrice(0n)
+      ).to.be.revertedWith("Precio invalido");
     });
   });
 });

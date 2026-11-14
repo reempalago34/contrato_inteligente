@@ -65,8 +65,6 @@ contrato_inteligente/
 | `getMembership(tokenId)` | view | Devuelve `(owner, expiresAt, valid)` en una sola llamada. |
 | `withdrawFunds()` | onlyOwner | Retira todo el balance al owner (checks-effects-interactions). |
 | `setMembershipPrice(newPrice)` | onlyOwner | Actualiza el precio. |
-| `setBaseURI(newBaseURI)` | onlyOwner | Actualiza la base de metadatos. |
-| `tokenURI(tokenId)` | view | `{baseURI}{tokenId}.json`. |
 
 ### Eventos (para el backend)
 
@@ -74,8 +72,6 @@ contrato_inteligente/
 | --- | --- |
 | `MembershipMinted` | `member indexed`, `tokenId indexed`, `expiresAt`, `amountPaid` |
 | `MembershipRenewed` | `member indexed`, `tokenId indexed`, `previousExpiry`, `newExpiry`, `amountPaid` |
-| `FundsWithdrawn` | `to indexed`, `amount` |
-| `MembershipPriceUpdated` | `previousPrice`, `newPrice` |
 
 > Las membresías son transferibles (ERC-721 estándar). Si quieres que sean
 > **soulbound**, sobrescribe `_update` y revierte cuando `from != address(0)`.
@@ -124,7 +120,7 @@ npx hardhat run scripts/export-abi.ts
   "startBlock": 1,
   "membershipPriceWei": "10000000000000000",
   "membershipPriceEth": "0.01",
-  "baseURI": "ipfs://REPLACE_WITH_CID/"
+  "deployedAt": "2026-11-13T07:35:38.000Z"
 }
 ```
 
@@ -282,12 +278,11 @@ Garantías incluidas:
 
 | Decisión | Ahorro / motivo |
 | --- | --- |
-| Custom errors en vez de strings | Evita strings en bytecode; revert barato. |
+| `require` con mensajes cortos | Reverts claros sin dependencias extra. |
 | Sin `ERC721Enumerable` | Mint/transfer mucho más baratos; el backend indexa. |
 | `mapping(uint256 => uint256)` | Un slot por token, sin structs ni arrays. |
-| Variables de storage cacheadas | Menos `SLOAD` en `buy`/`renew`/`withdraw`. |
-| `unchecked { ++totalMinted; }` | Contador acotado por la práctica. |
-| `tokenURI` calculado | Sin `ERC721URIStorage` (un `SSTORE` extra por mint). |
+| Sin metadatos on-chain | No hay `baseURI`/`tokenURI`; se ahorra un `SSTORE` por mint. |
+| `++totalMinted` | Contador simple de tokens emitidos. |
 | `_safeMint` solo cuando aporta | Seguridad para wallets contrato; se puede cambiar a `_mint` si todos son EOAs. |
 | Optimizer `runs: 200` | Equilibrio entre despliegue y uso diario. |
 
@@ -300,14 +295,14 @@ esperado no justifica la complejidad.
 
 - **Reentrancy**: `buyMembership`, `renewMembership` y `withdrawFunds` usan
   `nonReentrant`; el estado se escribe antes de cualquier llamada externa.
-- **Acceso**: `withdrawFunds`, `setMembershipPrice` y `setBaseURI` son
-  `onlyOwner`.
+- **Acceso**: `withdrawFunds` y `setMembershipPrice` son `onlyOwner`.
 - **Pago exacto**: se rechaza cualquier `msg.value != membershipPrice`.
 - **Reorgs**: el listener de demo no espera confirmaciones; en producción
   define `confirmations`, persiste el último bloque procesado y usa WebSocket.
 - **Transferencias**: al ser ERC-721, el NFT puede venderse; la membresía viaja
   con el token. Si no quieres mercado secundario, hazlo soulbound.
-- **Metadatos**: `baseURI` debe apuntar a IPFS/HTTPS con el JSON de cada token.
+- **Metadatos**: el contrato no expone `tokenURI`; si necesitas metadatos,
+  añade `baseURI`/`tokenURI` o usa `ERC721URIStorage`.
 - **Claves**: el listener no necesita private key. Nunca subas `.env` ni claves
   al repositorio.
 - **Auditoría**: antes de mainnet, audita el contrato y prueba en Sepolia.

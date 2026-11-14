@@ -17,7 +17,6 @@ async function main() {
   const [deployer] = await ethers.getSigners();
 
   const priceEth = process.env.MEMBERSHIP_PRICE_ETH ?? "0.01";
-  const baseURI = process.env.MEMBERSHIP_BASE_URI ?? "ipfs://REPLACE_ME/";
   const membershipPrice = ethers.parseEther(priceEth);
 
   if (membershipPrice === 0n) {
@@ -34,11 +33,10 @@ async function main() {
     )} ETH`
   );
   console.log(`Precio:     ${priceEth} ETH`);
-  console.log(`Base URI:   ${baseURI}`);
   console.log("──────────────────────────────────────────────");
 
   const factory = await ethers.getContractFactory("GymMembership");
-  const contract = await factory.deploy(membershipPrice, baseURI);
+  const contract = await factory.deploy(membershipPrice);
   await contract.waitForDeployment();
 
   const address = await contract.getAddress();
@@ -59,7 +57,6 @@ async function main() {
     deployer: deployer.address,
     membershipPriceWei: membershipPrice.toString(),
     membershipPriceEth: priceEth,
-    baseURI,
     deployedAt: new Date().toISOString(),
   };
 
